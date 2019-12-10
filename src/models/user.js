@@ -46,8 +46,10 @@ const userSchema = new mongoose.Schema({
             type: String,
             required: true
         }
-    }]
-
+    }],
+    avatar: {
+        type: Buffer
+    }
 }, {
     timestamps: true
 })
@@ -68,15 +70,17 @@ userSchema.methods.toJSON = function () {
 }
 
 userSchema.methods.generateAuthToken = async function () {
-    
-    try{const user = this;
-    const token = jwt.sign({ _id: user._id.toString() }, 'HeyThere');
 
-    user.tokens = user.tokens.concat({ token });
-    await user.save();
+    try {
+        const user = this;
+        const token = jwt.sign({ _id: user._id.toString() }, 'HeyThere');
 
-    return token;}
-    catch(e){
+        user.tokens = user.tokens.concat({ token });
+        await user.save();
+
+        return token;
+    }
+    catch (e) {
         throw e
     }
 }
@@ -105,9 +109,9 @@ userSchema.pre('save', async function (next) {
 
 //delete user tasks when user is removed
 
-userSchema.pre('remove', async function(next){
+userSchema.pre('remove', async function (next) {
     const user = this;
-    await Task.deleteMany({owner: user._id})
+    await Task.deleteMany({ owner: user._id })
     next();
 })
 
