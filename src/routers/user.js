@@ -1,7 +1,20 @@
 const express = require('express');
+const multer = require('multer');
 const User = require('../models/user');
 const auth = require('../middleware/auth');
 const router = new express.Router();
+const upload = multer({
+    dest: 'avatars',
+    limits: {
+        fileSize: 1000000
+    },
+    fileFilter(req, file, cb) {
+        if (!file.originalname.match(/\.(jpe?g|png)$/g)) {
+            return cb(new Error('Please upload jpg, jpeg or png files only'))
+        }
+        cb(undefined, true)
+    }
+});
 
 router.post('/users', async (req, res) => {
     const user = new User(req.body);
@@ -71,7 +84,7 @@ router.patch('/users/me', auth, async (req, res) => {
         // if (!user) {
         //     return res.status(404).send('User not found')
         // }
-        
+
         updates.forEach(prop => req.user[prop] = req.body[prop]);
         await req.user.save();
 
@@ -92,5 +105,12 @@ router.delete('/users/me', auth, async (req, res) => {
         res.status(500).send(e);
     }
 })
+
+router.post('/users/me/avatar', upload.single('avatar'), (req, res) => {
+    res.send();
+}, (error, req, res, next) => {
+    res.status(400).send({ error: error.message })
+})
+
 
 module.exports = router;
