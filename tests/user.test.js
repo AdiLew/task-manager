@@ -19,7 +19,7 @@ const userOne = {
 //This user will not be added in advance, and can be addressed as a new user
 const userTwo = {
     name: 'Adi',
-    email: 'adi@lewenstein.com',
+    email: 'adilu.lev@gmail.com',
     password: 'thisIsASecuredToken'
 };
 
@@ -56,7 +56,7 @@ test('Should log in existing user', async () => {
         })
         .expect(200);
 
-    const userFromDB = await User.findById(response.body.user._id);
+    const userFromDB = await User.findById(userOneId);
     expect(response.body.token).toBe(userFromDB.tokens[1].token);
 });
 
@@ -92,8 +92,8 @@ test('Should delete account for user', async () => {
         .send()
         .expect(200);
 
-        const userFromDB = await User.findById(userOne._id);
-        expect(userFromDB).toBeNull();
+    const userFromDB = await User.findById(userOneId);
+    expect(userFromDB).toBeNull();
 });
 
 test('Should not delete account for an unauthenticated user', async () => {
@@ -101,4 +101,40 @@ test('Should not delete account for an unauthenticated user', async () => {
         .delete('/users/me')
         .send()
         .expect(401);
+});
+
+test('Should upload avatar image', async () => {
+    await request(app)
+        .post('/users/me/avatar')
+        .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+        .attach('avatar', 'tests/fixtures/profile-pic.jpg')
+        .expect(200);
+
+    const userFromDB = await User.findById(userOneId);
+    expect(userFromDB.avatar).toEqual(expect.any(Buffer));
+});
+
+test('Should update valid user fields', async () => {
+    await request(app)
+    .patch('/users/me')
+    .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+    .send({
+        name: 'Princess Peach',
+        email: 'princess@peach.com'
+    })
+    .expect(200)
+
+    const userFromDB = await User.findById(userOneId);
+    expect(userFromDB.name).toBe('Princess Peach');
+    expect(userFromDB.email).toBe('princess@peach.com');
+
+});
+test('Should not update invalid user fields', async () => {
+    await request(app)
+    .patch('/users/me')
+    .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+    .send({
+        jobTitle: 'Princess'
+    })
+    .expect(400);
 });
