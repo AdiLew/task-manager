@@ -1,50 +1,33 @@
 const request = require('supertest');
-const jwt = require('jsonwebtoken');
-const mongoose = require('mongoose');
 const app = require('../src/app');
 const User = require('../src/models/user');
-
-//This user will be added to the DB before each test and can be addressed as an existing user
-const userOneId = new mongoose.Types.ObjectId();
-const userOne = {
-    _id: userOneId,
-    name: 'Omri',
-    email: 'omri@heffer.com',
-    password: 'testsMakeMeSad',
-    tokens: [{
-        token: jwt.sign({ _id: userOneId }, process.env.JWT_SECRET)
-    }]
-};
+const { userOneId, userOne, setupDatabase } = require('./fixtures/db')
 
 //This user will not be added in advance, and can be addressed as a new user
-const userTwo = {
+const userThree = {
     name: 'Adi',
     email: 'adilu.lev@gmail.com',
     password: 'thisIsASecuredToken'
 };
 
-beforeEach(async () => {
-    await User.deleteMany();
-    await new User(userOne).save();
-
-});
+beforeEach(setupDatabase);
 
 test('Should signup a new user', async () => {
     const response = await request(app)
         .post('/users')
-        .send(userTwo)
+        .send(userThree)
         .expect(201);
 
     const userFromDB = await User.findById(response.body.user._id);
     expect(userFromDB).not.toBeNull();
     expect(response.body).toMatchObject({
         user: {
-            name: userTwo.name,
-            email: userTwo.email
+            name: userThree.name,
+            email: userThree.email
         },
         token: userFromDB.tokens[0].token
     });
-    expect(userFromDB.password).not.toBe(userTwo.password);
+    expect(userFromDB.password).not.toBe(userThree.password);
 });
 
 test('Should log in existing user', async () => {
@@ -64,8 +47,8 @@ test('Should not login nonexistant user', async () => {
     await request(app)
         .post('/users/login')
         .send({
-            email: userTwo.email,
-            password: userTwo.password
+            email: userThree.email,
+            password: userThree.password
         })
         .expect(400);
 });
@@ -116,13 +99,13 @@ test('Should upload avatar image', async () => {
 
 test('Should update valid user fields', async () => {
     await request(app)
-    .patch('/users/me')
-    .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
-    .send({
-        name: 'Princess Peach',
-        email: 'princess@peach.com'
-    })
-    .expect(200)
+        .patch('/users/me')
+        .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+        .send({
+            name: 'Princess Peach',
+            email: 'princess@peach.com'
+        })
+        .expect(200)
 
     const userFromDB = await User.findById(userOneId);
     expect(userFromDB.name).toBe('Princess Peach');
@@ -131,10 +114,10 @@ test('Should update valid user fields', async () => {
 });
 test('Should not update invalid user fields', async () => {
     await request(app)
-    .patch('/users/me')
-    .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
-    .send({
-        jobTitle: 'Princess'
-    })
-    .expect(400);
+        .patch('/users/me')
+        .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+        .send({
+            jobTitle: 'Princess'
+        })
+        .expect(400);
 });
